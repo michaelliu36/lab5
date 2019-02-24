@@ -325,7 +325,7 @@ ensure the invariants are preserved for color and date, use them here
 as well.
 ......................................................................*)
 
-let new_child = (name : string) (col : color) (birth : date) : family =
+let new_child (name : string) (col : color) (birth : date) : family =
   Single { name;
            favorite = validated_rgb col;
            birthdate = validated_date birth } ;;
