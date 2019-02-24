@@ -155,7 +155,7 @@ to verify the invariant.
 ......................................................................*)
 
 let make_color (r : int) (g : int) (b : int) : color =
-  RGB (r, g, b) ;;
+  validated_rgb (RGB (r, g, b)) ;;
 
 (*......................................................................
 Exercise 5: Write a function, convert_to_rgb, that accepts a color and
@@ -184,7 +184,16 @@ From above:
 let convert_to_rgb (col : color) : int * int * int =
   match col with
   | RGB (r, g, b) -> (r, g, b)
-  | Simple str ->  ;;
+  | Simple str ->
+      match str with
+      | Red ->     (255,   0,   0)
+      | Crimson -> (164,  16,  52)
+      | Orange ->  (255, 165,   0)
+      | Yellow ->  (255, 255,   0)
+      | Green ->   (  0, 255,   0)
+      | Blue ->    (  0,   0, 255)
+      | Indigo ->  ( 75,   0, 130)
+      | Violet ->  (240, 130, 240) ;;
 
 (*======================================================================
 Part 2: Dates as a record type
@@ -209,7 +218,7 @@ should be. Then, consider the implications of representing the overall
 data type as a tuple or a record.
 ......................................................................*)
 
-type date = NotImplemented ;;
+type date = { year : int; month : int; day : int } ;;
 
 (* After you've thought it through, look up the Date module in the
 OCaml documentation to see how this was implemented there. If you
@@ -251,8 +260,20 @@ the invariant is violated, and returns the date if valid.
 
 exception Invalid_date of string ;;
 
-let validated_date =
-  fun _ -> failwith "validated_date not implemented" ;;
+let validated_date ({year; month; day} as date) : date =
+  if year < 0 then raise (Invalid_date "negative year")
+  else
+    let leap = (year mod 4 = 0 && year mod 100 <> 0)
+               || year mod 400 = 0 in
+    let max_days =
+      match month with
+      | 1 | 3 | 5 | 7 | 8 | 10 | 12 -> 31
+      | 4 | 6 | 9 | 11 -> 30
+      | 2 -> if leap then 29 else 28
+      | _ -> raise (Invalid_date "bad month") in
+    if day > max_days then raise (Invalid_date "day too large")
+    else if day < 1 then raise (Invalid_date "day too small")
+    else date ;;
 
 (*======================================================================
 Part 3: Family trees as an algebraic data type
@@ -265,7 +286,7 @@ Exercise 9: Define a person record type. Use the field names "name",
 "favorite", and "birthdate".
 ......................................................................*)
 
-type person = NotImplemented ;;
+type person = { name : string; favorite : color; birthdate : date } ;;
 
 (* Let's now do something with these person values. We'll create a
 data structure that allows us to model simple familial relationships.
@@ -304,8 +325,10 @@ ensure the invariants are preserved for color and date, use them here
 as well.
 ......................................................................*)
 
-let new_child =
-  fun _ -> failwith "new_child not implemented" ;;
+let new_child = (name : string) (col : color) (birth : date) : family =
+  Single { name;
+           favorite = validated_rgb col;
+           birthdate = validated_date birth } ;;
 
 (*......................................................................
 Exercise 11: Write a function that allows a person to marry in to a
@@ -316,8 +339,11 @@ is already made up of a married couple?
 
 exception Family_Trouble of string ;;
 
-let marry =
-  fun _ -> failwith "marry not implemented" ;;
+let marry (fam : family) (spouse : person) : family =
+  match fam with
+  | Single per -> Family (per, spouse, [])
+  | Family _ -> raise (Family_Trouble ("cannot add "
+                                       ^ spouse.name ^ " to a couple")) ;;
 
 (*......................................................................
 Exercise 12: Write a function that accepts two families, and returns
@@ -328,15 +354,20 @@ assumptions provided in the type definition of family to determine how
 to behave in corner cases.
 ......................................................................*)
 
-let add_to_family =
-  fun _ -> failwith "add_to_family not implemented" ;;
+let add_to_family (fam : family) (child : family) : family =
+  match fam with
+  | Single _ -> raise (Family_Trouble "singles don't have children")
+  | Family (p1, p2, children) -> Family (p1, p2, child :: children) ;;
 
 (*......................................................................
 Exercise 13: Complete the function below that counts the number of
 people in a given family. Be sure you count all spouses and children.
 ......................................................................*)
 
-let count_people =
-  fun _ -> failwith "count_people not implemented" ;;
+let rec count_people (fam: family) : int =
+  match fam with
+  | Single _ -> 1
+  | Family (_, _, c) -> 2 + List.fold_left (+) 0
+                                           (List.map count_people c) ;;
 
 
